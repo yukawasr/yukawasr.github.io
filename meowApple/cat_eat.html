@@ -206,7 +206,7 @@
     async function loadLevelData() {
         try {
             // 读取同级目录下的 level.json
-            const response = await fetch('./level.json');
+            const response = await fetch('src/level.json');
 
             if (!response.ok) {
                 throw new Error(`HTTP错误! 状态: ${response.status}`);
