@@ -1,0 +1,772 @@
+[
+  { "time": 0.50, "type": "lyric","text": "一颗苹果" },
+  {
+    "time": 2.495772,
+    "type": "apple"
+  },
+  {
+    "time": 3.597548,
+    "type": "apple"
+  },
+  {
+    "time": 5.237394,
+    "type": "apple"
+  },
+  {
+    "time": 7.241259,
+    "type": "apple"
+  },
+  {
+    "time": 9.813725,
+    "type": "apple"
+  },
+  { "time": 10.79, "type": "lyric","text": "作词：阿信" },
+
+  {
+    "time": 11.638716,
+    "type": "apple"
+  },
+  {
+    "time": 13.414735,
+    "type": "apple"
+  },
+  { "time": 14.48, "type": "lyric","text": "作曲：阿信" },
+
+  {
+    "time": 15.343692,
+    "type": "apple"
+  },
+  {
+    "time": 17.020043,
+    "type": "apple"
+  },
+  { "time": 18.36, "type": "lyric","text": "编曲：五月天" },
+
+
+  {
+    "time": 18.749787,
+    "type": "apple"
+  },
+  {
+    "time": 20.805231,
+    "type": "apple"
+  },
+  {
+    "time": 22.680789,
+    "type": "apple"
+  },
+  { "time": 23.32, "type": "lyric","text": "经过了漫长的等候" },
+
+  {
+    "time": 24.431371,
+    "type": "apple"
+  },
+  { "time": 26.34, "type": "lyric","text": "梦想是梦想" },
+
+  {
+    "time": 26.241811,
+    "type": "apple"
+  },
+  {
+    "time": 27.955511,
+    "type": "apple"
+  },
+  { "time": 27.97, "type": "lyric","text": "我还是一个我" },
+  {
+    "time": 29.928669,
+    "type": "apple"
+  },
+
+  { "time": 30.53, "type": "lyric","text": "那时间忘记挽留" },
+
+  {
+    "time": 31.782086,
+    "type": "apple"
+  },
+  {
+    "time": 32.580157,
+    "type": "apple"
+  },
+  {
+    "time": 33.650158,
+    "type": "apple"
+  },
+  { "time": 33.72, "type": "lyric","text": "最美时候" },
+  {
+    "time": 34.394527,
+    "type": "apple"
+  },
+
+  { "time": 35.09, "type": "lyric","text": "不经意匆匆的放过" },
+  {
+    "time": 35.309367,
+    "type": "apple"
+  },
+
+  {
+    "time": 37.435164,
+    "type": "apple"
+  },
+  { "time": 37.92, "type": "lyric","text": "曾经想拥抱的彩虹" },
+
+  {
+    "time": 38.12429,
+    "type": "apple"
+  },
+
+  {
+    "time": 39.144948,
+    "type": "apple"
+  },
+  {
+    "time": 40.060764,
+    "type": "apple"
+  },
+
+  {
+    "time": 41.008957,
+    "type": "apple"
+  },
+  { "time": 41.11, "type": "lyric","text": "盛开的花朵" },
+
+
+  {
+    "time": 41.955176,
+    "type": "apple"
+  },
+  {
+    "time": 42.790278,
+    "type": "apple"
+  },
+  { "time": 42.80, "type": "lyric","text": "那纯真的笑容" },
+
+
+  {
+    "time": 43.522714,
+    "type": "apple"
+  },
+  {
+    "time": 44.397938,
+    "type": "apple"
+  },
+  { "time": 45.29, "type": "lyric","text": "突然有风吹过" },
+
+  {
+    "time": 45.345355,
+    "type": "apple"
+  },
+
+
+  {
+    "time": 46.375148,
+    "type": "apple"
+  },
+  {
+    "time": 47.200409,
+    "type": "apple"
+  },
+
+  {
+    "time": 48.037224,
+    "type": "apple"
+  },
+  { "time": 48.07, "type": "lyric","text": "那一转眼" },
+
+
+  {
+    "time": 48.933531,
+    "type": "apple"
+  },
+  { "time": 49.59, "type": "lyric","text": "只剩我" },
+
+  {
+    "time": 49.827334,
+    "type": "apple"
+  },
+  {
+    "time": 50.815743,
+    "type": "apple"
+  },
+
+  {
+    "time": 51.768519,
+    "type": "apple"
+  },
+  {
+    "time": 52.635318,
+    "type": "apple"
+  },
+  { "time": 52.66, "type": "lyric","text": "我不懂" },
+  {
+    "time": 53.784712,
+    "type": "apple"
+  },
+  { "time": 54.00, "type": "lyric","text": "人世间的那些愁" },
+  {
+    "time": 54.428696,
+    "type": "apple"
+  },
+  {
+    "time": 55.426475,
+    "type": "apple"
+  },
+  { "time": 55.65, "type": "lyric","text": "他为什么要缠著我" },
+
+  {
+    "time": 56.295749,
+    "type": "apple"
+  },
+  {
+    "time": 57.210192,
+    "type": "apple"
+  },
+  { "time": 57.53, "type": "lyric","text": "到底这会是谁的错" },
+
+  {
+    "time": 58.079378,
+    "type": "apple"
+  },
+  { "time": 59.30, "type": "lyric","text": "还是我不放手" },
+
+  {
+    "time": 59.404072,
+    "type": "apple"
+  },
+  {
+    "time": 59.940721,
+    "type": "apple"
+  },
+
+  {
+    "time": 60.483606,
+    "type": "apple"
+  },
+
+
+  {
+    "time": 61.086113,
+    "type": "apple"
+  },
+  { "time": 61.19, "type": "lyric","text": "喔　人世间的那些愁" },
+
+  {
+    "time": 61.66873,
+    "type": "apple"
+  },
+  {
+    "time": 62.202221,
+    "type": "apple"
+  },
+
+  {
+    "time": 62.718458,
+    "type": "apple"
+  },
+  { "time": 63.01, "type": "lyric","text": "这世界给我的幽默" },
+
+  {
+    "time": 63.376473,
+    "type": "apple"
+  },
+  {
+    "time": 63.957885,
+    "type": "apple"
+  },
+
+  {
+    "time": 64.515729,
+    "type": "apple"
+  },
+  { "time": 64.79, "type": "lyric","text": "这是不是要告诉我" },
+
+  {
+    "time": 65.124596,
+    "type": "apple"
+  },
+  {
+    "time": 65.77198,
+    "type": "apple"
+  },
+  { "time": 66.72, "type": "lyric","text": "潮起终究潮落" },
+
+
+  {
+    "time": 67.516788,
+    "type": "apple"
+  },
+  {
+    "time": 68.799769,
+    "type": "apple"
+  },
+  { "time": 69.29, "type": "lyric","text": "总要有人来陪我" },
+
+  {
+    "time": 69.566686,
+    "type": "apple"
+  },
+
+  {
+    "time": 70.512683,
+    "type": "apple"
+  },
+
+  {
+    "time": 71.314148,
+    "type": "apple"
+  },
+  {
+    "time": 71.996056,
+    "type": "apple"
+  },
+  { "time": 72.49, "type": "lyric","text": "咽下苦果" },
+
+  {
+    "time": 72.605628,
+    "type": "apple"
+  },
+
+  {
+    "time": 73.286918,
+    "type": "apple"
+  },
+  { "time": 74.01, "type": "lyric","text": "喔　再尝一点美梦" },
+
+  {
+    "time": 74.158845,
+    "type": "apple"
+  },
+
+  {
+    "time": 74.960144,
+    "type": "apple"
+  },
+  {
+    "time": 75.956237,
+    "type": "apple"
+  },
+  { "time": 76.42, "type": "lyric","text": "要等你先开口" },
+
+  {
+    "time": 76.881003,
+    "type": "apple"
+  },
+
+  {
+    "time": 77.958848,
+    "type": "apple"
+  },
+  {
+    "time": 78.728578,
+    "type": "apple"
+  },
+  {
+    "time": 79.618594,
+    "type": "apple"
+  },
+  { "time": 80.02, "type": "lyric","text": "那冬天才会走" },
+
+  {
+    "time": 80.556541,
+    "type": "apple"
+  },
+
+  {
+    "time": 81.385868,
+    "type": "apple"
+  },
+
+  {
+    "time": 82.302206,
+    "type": "apple"
+  },
+  {
+    "time": 83.248407,
+    "type": "apple"
+  },
+  { "time": 84.09, "type": "lyric","text": "有些人经过我身旁" },
+
+  {
+    "time": 84.157759,
+    "type": "apple"
+  },
+
+  {
+    "time": 85.045568,
+    "type": "apple"
+  },
+  {
+    "time": 85.982987,
+    "type": "apple"
+  },
+
+  {
+    "time": 87.084582,
+    "type": "apple"
+  },
+  { "time": 87.29, "type": "lyric","text": "住在我脑中" },
+
+  {
+    "time": 88.001804,
+    "type": "apple"
+  },
+
+  {
+    "time": 88.881861,
+    "type": "apple"
+  },
+  { "time": 88.94, "type": "lyric","text": "在我心里钻洞" },
+
+
+  {
+    "time": 89.775228,
+    "type": "apple"
+  },
+  {
+    "time": 90.814009,
+    "type": "apple"
+  },
+  {
+    "time": 91.672185,
+    "type": "apple"
+  },
+  { "time": 91.51, "type": "lyric","text": "有些人变成相片" },
+
+
+  {
+    "time": 92.68245,
+    "type": "apple"
+  },
+
+  {
+    "time": 93.528037,
+    "type": "apple"
+  },
+
+  {
+    "time": 94.574412,
+    "type": "apple"
+  },
+  { "time": 94.63, "type": "lyric","text": "堆在角落" },
+
+  {
+    "time": 95.372564,
+    "type": "apple"
+  },
+
+  { "time": 96.14, "type": "lyric","text": "灰尘像雪一般冰冻" },
+
+  {
+    "time": 96.325759,
+    "type": "apple"
+  },
+
+  {
+    "time": 113.094412,
+    "type": "apple"
+  },
+  { "time": 113.64, "type": "lyric","text": "时间如果可以倒流" },
+
+  {
+    "time": 113.918337,
+    "type": "apple"
+  },
+
+  {
+    "time": 114.754021,
+    "type": "apple"
+  },
+  {
+    "time": 115.592881,
+    "type": "apple"
+  },
+
+  {
+    "time": 116.502207,
+    "type": "apple"
+  },
+
+  { "time": 116.82, "type": "lyric","text": "我想我还是" },
+
+  {
+    "time": 117.365742,
+    "type": "apple"
+  },
+  {
+    "time": 118.212561,
+    "type": "apple"
+  },
+  { "time": 118.43, "type": "lyric","text": "会卯起来蹉跎" },
+
+
+  {
+    "time": 119.084964,
+    "type": "apple"
+  },
+  {
+    "time": 120.000563,
+    "type": "apple"
+  },
+  {
+    "time": 120.959373,
+    "type": "apple"
+  },
+  { "time": 120.97, "type": "lyric","text": "反正就这样吧" },
+
+
+  {
+    "time": 121.966466,
+    "type": "apple"
+  },
+  {
+    "time": 122.856888,
+    "type": "apple"
+  },
+  {
+    "time": 123.723079,
+    "type": "apple"
+  },
+  { "time": 124.08, "type": "lyric","text": "我知道我　努力过" },
+
+  {
+    "time": 124.667895,
+    "type": "apple"
+  },
+  {
+    "time": 125.643074,
+    "type": "apple"
+  },
+
+  {
+    "time": 126.594964,
+    "type": "apple"
+  },
+  {
+    "time": 127.509963,
+    "type": "apple"
+  },
+
+  {
+    "time": 128.192147,
+    "type": "apple"
+  },
+  { "time": 128.39, "type": "lyric","text": "我想到　遥远遥远的以后" },
+
+  {
+    "time": 128.771988,
+    "type": "apple"
+  },
+
+  {
+    "time": 129.280338,
+    "type": "apple"
+  },
+  {
+    "time": 129.837131,
+    "type": "apple"
+  },
+
+  {
+    "time": 130.300363,
+    "type": "apple"
+  },
+
+
+  {
+    "time": 130.845154,
+    "type": "apple"
+  },
+  { "time": 131.18, "type": "lyric","text": "会不会有人知道我" },
+
+  {
+    "time": 131.5188,
+    "type": "apple"
+  },
+
+  {
+    "time": 132.056472,
+    "type": "apple"
+  },
+
+  {
+    "time": 132.604555,
+    "type": "apple"
+  },
+  { "time": 133.11, "type": "lyric","text": "在这个寂寞的星球" },
+  {
+    "time": 133.327033,
+    "type": "apple"
+  },
+  {
+    "time": 133.767295,
+    "type": "apple"
+  },
+  {
+    "time": 134.321943,
+    "type": "apple"
+  },
+  { "time": 135.01, "type": "lyric","text": "曾这样的活过" },
+  {
+    "time": 135.218521,
+    "type": "apple"
+  },
+  {
+    "time": 135.842668,
+    "type": "apple"
+  },
+  {
+    "time": 136.646793,
+    "type": "apple"
+  },
+  { "time": 136.91, "type": "lyric","text": "喔　遥远遥远的以后" },
+  {
+    "time": 137.168677,
+    "type": "apple"
+  },
+  {
+    "time": 137.874728,
+    "type": "apple"
+  },
+  {
+    "time": 138.67504,
+    "type": "apple"
+  },
+  { "time": 138.75, "type": "lyric","text": "天长和地久的尽头" },
+  {
+    "time": 139.463444,
+    "type": "apple"
+  },
+
+  {
+    "time": 140.27726,
+    "type": "apple"
+  },
+  { "time": 140.59, "type": "lyric","text": "应该没有人能抢走" },
+
+  {
+    "time": 140.960727,
+    "type": "apple"
+  },
+  {
+    "time": 141.566048,
+    "type": "apple"
+  },
+
+  {
+    "time": 142.163731,
+    "type": "apple"
+  },
+  { "time": 142.38, "type": "lyric","text": "我永远的感动" },
+
+
+  {
+    "time": 143.15478,
+    "type": "apple"
+  },
+  {
+    "time": 144.019019,
+    "type": "apple"
+  },
+
+  {
+    "time": 144.661586,
+    "type": "apple"
+  },
+  { "time": 144.93, "type": "lyric","text": "总要有一首我的歌" },
+
+  {
+    "time": 145.36531,
+    "type": "apple"
+  },
+
+  {
+    "time": 146.157033,
+    "type": "apple"
+  },
+  {
+    "time": 146.955596,
+    "type": "apple"
+  },
+
+  {
+    "time": 147.860771,
+    "type": "apple"
+  },
+  { "time": 148.06, "type": "lyric","text": "大声唱过" },
+
+  {
+    "time": 148.7115,
+    "type": "apple"
+  },
+
+  {
+    "time": 149.450668,
+    "type": "apple"
+  },
+  { "time": 149.54, "type": "lyric","text": "喔　再看天地辽阔" },
+  {
+    "time": 150.405766,
+    "type": "apple"
+  },
+  {
+    "time": 151.317889,
+    "type": "apple"
+  },
+  { "time": 152.31, "type": "lyric","text": "活著不多不少" },
+  {
+    "time": 152.316734,
+    "type": "apple"
+  },
+  {
+    "time": 153.680943,
+    "type": "apple"
+  },
+  {
+    "time": 154.562194,
+    "type": "apple"
+  },
+  {
+    "time": 155.51077,
+    "type": "apple"
+  },
+  { "time": 155.60, "type": "lyric","text": "幸福刚好够用" },
+
+
+  {
+    "time": 158.020164,
+    "type": "apple"
+  },
+  {
+    "time": 159.231386,
+    "type": "apple"
+  },
+  { "time": 159.67, "type": "lyric","text": "活著其实很好" },
+
+  {
+    "time": 160.102013,
+    "type": "apple"
+  },
+
+  {
+    "time": 161.118626,
+    "type": "apple"
+  },
+  {
+    "time": 161.977697,
+    "type": "apple"
+  },
+  {
+    "time": 162.84254,
+    "type": "apple"
+  },
+  { "time": 162.89, "type": "lyric","text": "再吃一颗苹果" },
+
+  {
+    "time": 165.473359,
+    "type": "apple"
+  },
+  { "time": 180.0, "type": "end"}
+]
+
+
+
+

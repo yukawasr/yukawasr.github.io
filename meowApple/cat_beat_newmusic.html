@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meow Beat - 节奏跑酷原型</title>
+    <style>
+        /* CSS 样式部分 */
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f0f0;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden; /* 防止滚动条 */
+        }
+
+        #game-container {
+            position: relative;
+            width: 800px;
+            height: 400px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        canvas {
+            background: linear-gradient(to bottom, #87CEEB, #E0F6FF); /* 简单的天空背景 */
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* 界面覆盖层 (开始界面/结束界面) */
+        .overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+        }
+
+        /* 隐藏元素 */
+        .hidden {
+            display: none !important;
+        }
+
+        h1 { margin: 0 0 20px 0; font-size: 48px; color: #FFD700; }
+        p { font-size: 24px; }
+        button {
+            padding: 15px 30px;
+            font-size: 24px;
+            cursor: pointer;
+            background-color: #FF6B6B;
+            border: none;
+            color: white;
+            border-radius: 50px;
+            transition: transform 0.1s;
+        }
+        button:active { transform: scale(0.95); }
+
+        #score-board {
+            position: absolute;
+            top: 20px;
+            left: 30px;
+            font-size: 28px;
+            font-weight: bold;
+            color: #333;
+            z-index: 5;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="800" height="400"></canvas>
+    <div id="score-board">Score: 0</div>
+
+    <div id="start-screen" class="overlay">
+        <h1>Meow Beat</h1>
+        <p>按下空格键或点击按钮开始</p>
+        <p style="font-size: 16px; color: #ccc;">(注意：请跟随音乐节奏跳跃)</p>
+        <br>
+        <button id="start-btn">开始游戏</button>
+    </div>
+
+    <div id="game-over-screen" class="overlay hidden">
+        <h1 id="end-title">Game Over</h1>
+        <p>最终得分: <span id="final-score">0</span></p>
+        <br>
+        <button id="restart-btn">再来一局</button>
+    </div>
+</div>
+
+<audio id="bgm" src="https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Scott_Holmes/Happy_Music/Scott_Holmes_-_Upbeat_Party.mp3" preload="auto"></audio>
+<audio id="sfx-eat"></audio>
+
+<script>
+    // ==================== JavaScript 游戏逻辑 ====================
+
+    // --- 1. 全局变量与配置 ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score-board');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const finalScoreElement = document.getElementById('final-score');
+    const bgm = document.getElementById('bgm');
+
+    // 游戏配置
+    const GRAVITY = 0.6;       // 重力
+    const JUMP_FORCE = -12;    // 跳跃力度
+    const GROUND_Y = 350;      // 地面高度坐标
+    const SCROLL_SPEED = 5;    // 游戏滚动速度 (像素/帧)
+
+    let gameState = 'START'; // START, PLAYING, GAMEOVER
+    let score = 0;
+    let frames = 0;
+    let gameLoopId = null;
+
+    // --- 2. 核心：关卡数据 (谱面) ---
+    // 这里的 'time' 是音乐播放的秒数。当音乐播放到这个时间点时，物体会在屏幕右侧生成。
+    // 这是一个预设的演示谱面。
+    const LEVEL_DATA = [
+        { time: 2.0, type: 'obstacle' }, // 2秒时出现障碍
+        { time: 3.5, type: 'apple' },    // 3.5秒出现苹果
+        { time: 4.0, type: 'apple' },
+        { time: 5.5, type: 'obstacle' },
+        { time: 7.0, type: 'apple' },
+        { time: 8.5, type: 'obstacle' },
+        { time: 9.0, type: 'obstacle' }, // 连续障碍
+        { time: 10.5, type: 'apple' },
+        { time: 11.0, type: 'apple' },
+        { time: 11.5, type: 'apple' },   // 三连苹果
+        { time: 14.0, type: 'obstacle' },
+        // ... 更多数据可以加在这里
+        { time: 20.0, type: 'end' }     // 标记游戏结束点
+    ];
+    let levelIndex = 0; // 用于追踪当前读取到谱面的第几个数据
+
+    // --- 3. 游戏对象类定义 ---
+
+    // 玩家 (小猫) 类
+    class Player {
+        constructor() {
+            this.width = 40;
+            this.height = 40;
+            this.x = 100; // 固定在屏幕左侧
+            this.y = GROUND_Y - this.height;
+            this.velocityY = 0;
+            this.isJumping = false;
+            this.color = '#FFAA00'; // 橙色代表猫
+        }
+
+        draw() {
+            ctx.fillStyle = this.color;
+            // 用简单的矩形代替猫的图片
+            ctx.fillRect(this.x, this.y, this.width, this.height);
+            // 加个小耳朵表示方向
+            ctx.fillStyle = '#FF8800';
+            ctx.beginPath();
+            ctx.moveTo(this.x + 30, this.y);
+            ctx.lineTo(this.x + 40, this.y - 10);
+            ctx.lineTo(this.x + 50, this.y + 10);
+            ctx.fill();
+        }
+
+        update() {
+            // 应用物理
+            this.y += this.velocityY;
+
+            // 如果在空中，应用重力
+            if (this.y + this.height < GROUND_Y) {
+                this.velocityY += GRAVITY;
+                this.isJumping = true;
+            } else {
+                // 落地
+                this.y = GROUND_Y - this.height;
+                this.velocityY = 0;
+                this.isJumping = false;
+            }
+        }
+
+        jump() {
+            if (!this.isJumping) {
+                this.velocityY = JUMP_FORCE;
+            }
+        }
+    }
+
+    // 障碍物和苹果的基类
+    class GameEntity {
+        constructor(type) {
+            this.type = type;
+            this.width = 30;
+            this.height = 30;
+            this.x = canvas.width; // 从屏幕最右侧生成
+            // 苹果在空中，障碍在地生
+            this.y = (type === 'apple') ? (GROUND_Y - 100) : (GROUND_Y - 30);
+            this.color = (type === 'apple') ? '#FF0000' : '#8B4513'; // 红苹果，棕障碍
+            this.markedForDeletion = false;
+        }
+
+        draw() {
+            ctx.fillStyle = this.color;
+            if (this.type === 'apple') {
+                // 画个圆形代表苹果
+                ctx.beginPath();
+                ctx.arc(this.x + this.width/2, this.y + this.height/2, this.width/2, 0, Math.PI * 2);
+                ctx.fill();
+            } else {
+                // 画矩形代表障碍 (树桩)
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        update() {
+            // 向左移动
+            this.x -= SCROLL_SPEED;
+            // 移出屏幕左侧则标记删除
+            if (this.x + this.width < 0) {
+                this.markedForDeletion = true;
+            }
+        }
+    }
+
+    // --- 4. 游戏实例初始化 ---
+    let player = new Player();
+    let entities = []; // 存放屏幕上所有的苹果和障碍
+
+    // --- 5. 核心功能函数 ---
+
+    function initGame() {
+        // 重置变量
+        score = 0;
+        levelIndex = 0;
+        frames = 0;
+        entities = [];
+        player = new Player();
+        scoreElement.innerText = 'Score: ' + score;
+
+        // 重置音乐
+        bgm.currentTime = 0;
+        // 浏览器需要用户交互才能播放音频，所以放在点击事件里
+        bgm.play().catch(e => console.log("需要用户点击才能播放音频"));
+
+        gameState = 'PLAYING';
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+
+        if (gameLoopId) cancelAnimationFrame(gameLoopId);
+        gameLoop();
+    }
+
+    function gameOver(isVictory = false) {
+        gameState = 'GAMEOVER';
+        bgm.pause();
+        cancelAnimationFrame(gameLoopId);
+
+        const endTitle = document.getElementById('end-title');
+        endTitle.innerText = isVictory ? "Victory! 通关成功!" : "Game Over!";
+        endTitle.style.color = isVictory ? "#4CAF50" : "#FF6B6B";
+
+        finalScoreElement.innerText = score;
+        gameOverScreen.classList.remove('hidden');
+    }
+
+    // 简单的矩形碰撞检测 (AABB)
+    function checkCollision(rect1, rect2) {
+        return (
+            rect1.x < rect2.x + rect2.width &&
+            rect1.x + rect1.width > rect2.x &&
+            rect1.y < rect2.y + rect2.height &&
+            rect1.y + rect1.height > rect2.y
+        );
+    }
+
+    // 生成器：检查音乐时间，决定是否生成物体
+    function spawnManager() {
+        // 如果谱面读完了，就返回
+        if (levelIndex >= LEVEL_DATA.length) return;
+
+        const nextSpawn = LEVEL_DATA[levelIndex];
+        // 核心：比较当前音乐播放时间和谱面设定的时间
+        // 使用一个小的缓冲范围 (0.1秒) 确保不会错过节奏点
+        if (bgm.currentTime >= nextSpawn.time - 0.1) {
+            if (nextSpawn.type === 'end') {
+                gameOver(true); // 胜利通关
+            } else {
+                entities.push(new GameEntity(nextSpawn.type));
+                levelIndex++;
+            }
+        }
+
+        // 如果音乐播完了，也结束游戏 (作为备用胜利条件)
+        if (bgm.ended && gameState === 'PLAYING') {
+            gameOver(true);
+        }
+    }
+
+    // --- 6. 游戏主循环 (每一帧运行一次) ---
+    function gameLoop() {
+        if (gameState !== 'PLAYING') return;
+
+        // A. 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // B. 绘制地面线
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.strokeStyle = '#654321';
+        ctx.lineWidth = 5;
+        ctx.stroke();
+
+        // C. 更新和绘制玩家
+        player.update();
+        player.draw();
+
+        // D. 生成管理 (基于音乐时间)
+        spawnManager();
+
+        // E. 更新和绘制所有实体 (苹果/障碍)
+        // 倒序遍历以便安全删除元素
+        for (let i = entities.length - 1; i >= 0; i--) {
+            let entity = entities[i];
+            entity.update();
+            entity.draw();
+
+            // 碰撞检测
+            if (checkCollision(player, entity)) {
+                if (entity.type === 'apple') {
+                    // 吃到苹果
+                    score += 100;
+                    scoreElement.innerText = 'Score: ' + score;
+                    entity.markedForDeletion = true; // 吃掉后消失
+                    // 播放一个简单的提示音 (可选，需要准备音频文件)
+                    // sfxEat.play();
+                } else if (entity.type === 'obstacle') {
+                    // 撞到障碍
+                    gameOver(false);
+                }
+            }
+
+            // 清理移出屏幕或被吃掉的实体
+            if (entity.markedForDeletion) {
+                entities.splice(i, 1);
+            }
+        }
+
+        frames++;
+        // 请求下一帧动画
+        gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+
+    // --- 7. 输入事件监听 ---
+
+    // 键盘控制 (空格键跳跃/开始)
+    document.addEventListener('keydown', (e) => {
+        if (e.code === 'Space') {
+            if (gameState === 'START' || gameState === 'GAMEOVER') {
+                initGame();
+            } else if (gameState === 'PLAYING') {
+                player.jump();
+            }
+        }
+    });
+
+    // 鼠标/触摸点击控制 (适配移动端)
+    canvas.addEventListener('touchstart', handleTap);
+    canvas.addEventListener('mousedown', handleTap);
+
+    function handleTap(e) {
+        if (gameState === 'PLAYING') {
+            player.jump();
+            // 防止在移动端触发滚动和默认的鼠标事件
+            e.preventDefault();
+        }
+    }
+
+    // 按钮点击事件
+    document.getElementById('start-btn').addEventListener('click', initGame);
+    document.getElementById('restart-btn').addEventListener('click', initGame);
+
+</script>
+</body>
+</html>

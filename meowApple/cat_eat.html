@@ -1,0 +1,764 @@
+
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Meow Apple</title>
+    <style>
+        /* CSS 样式部分 */
+        /* 👇 === 替换整个 CSS === */
+        body {
+            margin: 0;
+            display: flex;
+            justify-content: center; /* 水平居中 */
+            align-items: center;     /* 垂直居中 */
+            height: 100vh;           /* 占满全屏高度 */
+            background-color: #001336;
+            font-family: 'Courier New', monospace;
+            overflow: hidden;        /* 禁止滚动 */
+            touch-action: none;      /* 禁止系统缩放/后退手势 */
+        }
+
+        #game-container {
+            position: relative;
+
+            /* 👇 核心适配逻辑 👇 */
+            width: 100%;             /* 默认占满宽度 (适配手机竖屏) */
+            max-width: 1000px;        /* 电脑上最大不超过 800px */
+
+            /* 强制保持 2:1 比例，根据宽度自动计算高度 */
+            aspect-ratio: 2 / 1;
+
+            /* 如果屏幕特别扁 (比如手机横屏时高度不够)，则改用高度限制 */
+            max-height: 100vh;
+
+            border: 4px solid #fff;
+            box-shadow: 0 0 20px rgba(0,0,0,0.5);
+            background-color: #87CEEB;
+        }
+
+        canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+            /* 确保 canvas 内部像素不模糊 */
+            image-rendering: pixelated;
+        }
+
+        /* 遮罩层 (开始/结束界面) */
+        .overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            text-align: center;
+        }
+
+        .hidden { display: none !important; }
+
+        /* 响应式字体：手机上字号小一点，电脑上大一点 */
+        h1 { margin: 0 0 10px 0; font-size: clamp(24px, 5vw, 40px); color: #f1c40f; text-shadow: 2px 2px 0 #c0392b; }
+        p { font-size: clamp(14px, 3vw, 18px); color: #ecf0f1; margin-bottom: 20px; }
+
+        button {
+            padding: 10px 30px;
+            font-size: clamp(16px, 4vw, 24px); /* 按钮文字自适应 */
+            cursor: pointer;
+            background-color: #e74c3c;
+            border: 3px solid #c0392b;
+            color: white;
+            font-weight: bold;
+            border-radius: 50px;
+            white-space: nowrap; /* 防止按钮文字换行 */
+        }
+        button:active { transform: scale(0.95); background-color: #c0392b; }
+
+        #score-board {
+            position: absolute;
+            top: 5%;
+            left: 5%;
+            font-size: clamp(16px, 4vw, 24px); /* 分数文字自适应 */
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 2px 2px 0 #000;
+            z-index: 5;
+        }
+
+        #loading-msg { color: #f1c40f; margin-top: 10px; font-size: 12px; }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas" width="1000" height="500"></canvas>
+    <div id="score-board">Score: 0</div>
+
+    <div id="start-screen" class="overlay">
+        <h1>一颗苹果</h1>
+        <p>按下空格键或点击按钮开始</p>
+        <p style="font-size: 16px; color: #ccc;">(注意：请跟随音乐节奏跳跃)</p>
+        <br>
+        <button id="start-btn">开始游戏</button>
+    </div>
+
+    <div id="game-over-screen" class="overlay hidden">
+        <h1 id="end-title">Game Over</h1>
+        <p>最终得分: <span id="final-score">0</span></p>
+        <br>
+        <button id="restart-btn">再来一局</button>
+    </div>
+</div>
+
+<audio id="bgm" src="src/一颗苹果.mp3" preload="auto"></audio>
+<audio id="sfx-eat"></audio>
+
+<script>
+    // ==================== JavaScript 游戏逻辑 ====================
+
+    // --- 1. 全局变量与配置 ---
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const scoreElement = document.getElementById('score-board');
+    const startScreen = document.getElementById('start-screen');
+    const gameOverScreen = document.getElementById('game-over-screen');
+    const finalScoreElement = document.getElementById('final-score');
+    const bgm = document.getElementById('bgm');
+
+    // 游戏配置
+    const GRAVITY = 0.75;       // 重力
+    const JUMP_FORCE = -15;    // 跳跃力度
+    const GROUND_Y = 438;      // 地面高度坐标
+    const SCROLL_SPEED = 6.25;    // 游戏滚动速度 (像素/帧)
+    // 👇 === 新增：在这里添加 lastTime 变量 ===
+    let lastTime = 0;    //用于记录上一帧的时间戳
+    const BPM = 130;
+    const SECONDS_PER_BEAT = 60.0 / BPM;
+    const SPAWN_LEAD_TIME = (1000 - 125) / (SCROLL_SPEED * 60);
+
+    //  === 录制模式开关 ===
+    // 【平时玩设为 false】。需要制作谱面时设为 true。
+    const RECORD_MODE = false;
+    // 用来临时存储你录下的节奏
+    let recordedLevel = [];
+
+    let gameState = 'START'; // START, PLAYING, GAMEOVER
+    let score = 0;
+    let frames = 0;
+    let gameLoopId = null;
+    const catImage = new Image();
+
+    // 这里填你的图片路径，假设你的图片叫 cat_run.png
+    // 图片应该是一张横条，比如宽 200px 高 50px，包含 4 帧，每帧 50x50
+    catImage.src = 'src/img/default.png';
+
+    //  === 加载背景图数组 ===
+    const bgFiles = ['src/img/bg1.png', 'src/img/bg1b.png',  'src/img/bg1f.png',
+        'src/img/bg1s.png', 'src/img/bg12026.png',
+        'src/img/bg2.png', 'src/img/bg2b.png',  'src/img/bg2f.png',
+        'src/img/bg2s.png', 'src/img/bg22026.png'];
+
+    const bgImages = [];
+    bgFiles.forEach(src => {
+        const img = new Image();
+        img.src = src; // 确保这些图片都在你的文件夹里
+        bgImages.push(img);
+    });
+    // 定义你想要的播放顺序 (对应 bgImages 的索引，从0开始)
+    const bgSequence = [5,5,5,5,5,5,5,5,5,5,    5,5,5,5,5,5,5,5,5,5,
+        5,5,5,5,5,5,5,5,5,6,   8,5,5,5,5,5,5,5,5,5,
+        5,5,5,5,5,5,7,9,5,5];
+
+    const appleSprite = new Image();
+    appleSprite.src = 'src/img/apple_anim.png';
+
+    const obstacleImage = new Image();
+    obstacleImage.src = 'src/img/obstacle.png'; // 比如树桩、石头
+
+    let background;
+    let decorations = [];
+
+    const cuteImages = [];
+    const cuteSources = ['src/img/ashin_pink.png', 'src/img/masa_yellow.png', 'src/img/ming_blue.png',
+        'src/img/monster_red.png', 'src/img/stone_green.png']; // 你的文件名
+    cuteSources.forEach(src => {
+        const img = new Image();
+        img.src = src;
+        cuteImages.push(img);
+    });
+
+    // --- 2. 核心：关卡数据 (谱面) ---
+    // 这里的 'time' 是音乐播放的秒数。当音乐播放到这个时间点时，物体会在屏幕右侧生成。
+    // 这是一个预设的演示谱面。
+    let levelIndex = 0; // 用于追踪当前读取到谱面的第几个数据
+
+    // 👇 === 核心改动 1: 变量初始化为空数组 ===
+    let LEVEL_DATA = [];
+    //obstacle
+    // 👆 ===================================
+
+    // 👇 === 核心改动 2: 新增读取 JSON 的函数 ===
+    async function loadLevelData() {
+        try {
+            // 读取同级目录下的 level.json
+            const response = await fetch('./level.json');
+
+            if (!response.ok) {
+                throw new Error(`HTTP错误! 状态: ${response.status}`);
+            }
+
+            LEVEL_DATA = await response.json();
+
+            // 数据加载成功，启用开始按钮
+            console.log("关卡数据加载成功:", LEVEL_DATA);
+
+        } catch (error) {
+            console.error("加载失败:", error);
+        }
+    }
+    // 页面加载时立即调用
+    loadLevelData();
+    // 👆 ======================================
+
+    // --- 3. 游戏对象类定义 ---
+
+    // 玩家 (小猫) 类
+    class Player {
+        constructor() {
+            this.width = 100;
+            this.height = 100;
+            this.x = 125; // 固定在屏幕左侧
+            this.y = GROUND_Y - this.height;
+            this.velocityY = 0;
+            this.isJumping = false;
+            this.frameX = 0;       // 当前在第几帧 (0, 1, 2, 3...)
+            this.maxFrame = 7;     // 总共有多少帧 - 1 (假设有4帧，这里填3)
+            this.fps = 10;         // 动画速度 (每秒切多少帧)
+            this.frameTimer = 0;   // 计时器
+            this.frameInterval = 1000 / this.fps; // 每帧间隔时间
+        }
+
+        draw() {
+            // 假设原图中每一帧的真实宽度 (Source Width)
+            // 如果整张图宽 200，有 4 帧，那每帧就是 50
+            const spriteWidth = 500;
+            const spriteHeight = 500;
+            // ctx.fillStyle = this.color;
+            // // 用简单的矩形代替猫的图片
+            // ctx.fillRect(this.x, this.y, this.width, this.height);
+            // // 加个小耳朵表示方向
+            // ctx.fillStyle = '#FF8800';
+            // ctx.beginPath();
+            // ctx.moveTo(this.x + 30, this.y);
+            // ctx.lineTo(this.x + 40, this.y - 10);
+            // ctx.lineTo(this.x + 50, this.y + 10);
+            // ctx.fill();
+            // 👇 === 修改：绘制图片 ===
+            // ctx.drawImage(图片对象,
+            //    源图切割X, 源图切割Y, 切割宽, 切割高, (这4个参数决定切哪一块)
+            //    画布位置X, 画布位置Y, 画布宽, 画布高  (这4个参数决定画在哪里)
+            // )
+            ctx.drawImage(
+                catImage,
+                this.frameX * spriteWidth, 0, spriteWidth, spriteHeight,
+                this.x, this.y, this.width, this.height
+            );
+
+            // (可选) 绘制一个红框方便调试碰撞箱，正式发布时删掉
+            // ctx.strokeStyle = 'red';
+            // ctx.strokeRect(this.x, this.y, this.width, this.height);
+        }
+
+        update(deltaTime) {
+            // 应用物理
+            this.y += this.velocityY;
+
+            // 如果在空中，应用重力
+            if (this.y + this.height < GROUND_Y) {
+                this.velocityY += GRAVITY;
+                this.isJumping = true;
+            } else {
+                // 落地
+                this.y = GROUND_Y - this.height;
+                this.velocityY = 0;
+                this.isJumping = false;
+            }
+            if (this.isJumping) {
+                // 如果在跳跃，通常固定显示某一帧（比如第2帧），或者暂停动画
+                this.frameX = 4;
+            } else {
+                // 如果在跑动，就循环播放图片
+                if(isNaN(this.frameTimer)){
+                    this.frameTimer = 0;
+                }
+                if (this.frameTimer > this.frameInterval) {
+                    if (this.frameX >= this.maxFrame) {
+                        this.frameX = 0; // 播完一轮，回到第一帧
+                    } else {
+                        this.frameX++;   // 下一帧
+                    }
+                    this.frameTimer = 0;
+                } else {
+                    // 累加时间 (需要用到 deltaTime)
+
+                    this.frameTimer += deltaTime;
+                }
+            }
+        }
+
+        jump() {
+            if (!this.isJumping) {
+                this.velocityY = JUMP_FORCE;
+            }
+        }
+    }
+
+    // 障碍物和苹果的基类
+    class GameEntity {
+        constructor(data) {
+            this.type = data.type;
+            this.text = data.text;
+            this.width = 38;
+            this.height = 38;
+            this.x = canvas.width; // 从屏幕最右侧生成
+            // 苹果在空中，障碍在地生
+            if (this.type === 'apple') {
+                this.y = GROUND_Y - 150;
+            } else if (this.type === 'lyric') {
+                this.y = GROUND_Y - 250; // 歌词飘在更高的地方，不挡路
+            } else {
+                this.y = GROUND_Y - 38;  // 障碍物在地面
+            }
+            this.markedForDeletion = false;
+
+            this.frameX = 0;        // 当前播放第几帧
+            // 如果是苹果，最大帧索引是1 (共2帧)；如果是障碍，是0 (不动画)
+            this.maxFrame = (this.type === 'apple') ? 1 : 0;
+            this.fps = 6;           // 动画速度 (不用太快，每秒6帧即可)
+            this.frameTimer = 0;    // 计时器
+            this.frameInterval = 1000 / this.fps;
+        }
+
+        draw() {
+            let imgSource;
+            if (this.type === 'lyric') {
+                ctx.save(); // 保存当前画笔状态
+                ctx.fillStyle = "#01b6fd"; // 字体颜色
+                ctx.font = "bold 106px 'Microsoft YaHei', sans-serif"; // 字体大小 (记得配合画布缩放)
+                ctx.strokeStyle = "white"; // 描边颜色
+                ctx.lineWidth = 4;
+
+                // 绘制描边 (让文字更清楚)
+                ctx.strokeText(this.text, this.x, this.y);
+                // 绘制实体字
+                ctx.fillText(this.text, this.x, this.y);
+
+                ctx.restore(); // 恢复画笔
+                return; // 画完歌词直接结束，不画后面的图片了
+            }
+            if (this.type === 'apple') {
+                imgSource = appleSprite;
+            } else {
+                imgSource = obstacleImage;
+            }
+            if (imgSource && imgSource.complete) {
+                // 核心变化在这里：
+                // 根据 this.frameX 计算从原图的哪里开始切
+                const sourceX = this.frameX * this.width;
+
+                ctx.drawImage(
+                    imgSource,          // 图片源
+                    sourceX, 0,         // 源图起点 X, Y (根据帧数变化)
+                    this.width, this.height, // 源图切多大 (一帧的大小)
+                    this.x, this.y,     // 画布目标 X, Y
+                    this.width, this.height  // 画布目标画多大
+                );
+            } else {
+                // (可选) 如果图片还没加载出来，暂时画个色块代替，防止看不见
+                ctx.fillStyle = (this.type === 'apple') ? 'red' : 'brown';
+                ctx.fillRect(this.x, this.y, this.width, this.height);
+            }
+        }
+
+        update(deltaTime) {
+            // 向左移动
+            this.x -= SCROLL_SPEED;
+            // 移出屏幕左侧则标记删除
+            if (this.x + this.width < -1000) {
+                this.markedForDeletion = true;
+            }
+            // B. 动画帧逻辑 (只有 maxFrame > 0 时才需要计算)
+            if (this.maxFrame > 0) {
+                this.frameTimer += deltaTime;
+                if (this.frameTimer > this.frameInterval) {
+                    this.frameX++;
+                    // 循环播放：如果超过最大帧，回到0
+                    if (this.frameX > this.maxFrame) {
+                        this.frameX = 0;
+                    }
+                    this.frameTimer = 0; // 重置计时器
+                }
+            }
+        }
+    }
+
+    //  === 背景类 ===
+    class BackgroundLayer {
+        constructor(images, sequence, speedModifier) {
+            this.images = images;       // 图片对象数组
+            this.sequence = sequence;   // 顺序数组 [0, 0, 1...]
+            this.speedModifier = speedModifier; // 视差系数 (0.5表示半速，1.0表示全速)
+            this.speed = SCROLL_SPEED * this.speedModifier;
+            this.x = 0;
+            this.y = 0;
+            this.width = 1000;  // 假设背景图宽度和画布一致
+            this.height = 500;
+
+            this.currentIndex = 0; // 当前播放到序列的第几个
+        }
+
+        update() {
+            // 根据游戏速度移动
+            this.speed = SCROLL_SPEED * this.speedModifier;
+            // 向左移动
+            this.x -= this.speed;
+
+            // 核心逻辑：当当前的一张图完全移出屏幕左侧时
+            if (this.x <= -this.width) {
+                // 1. 把坐标拉回来 (与其重置为0，不如加上width，防止浮点数计算导致的缝隙)
+                this.x += this.width;
+
+                // 2. 指针移向序列的下一个
+                this.currentIndex++;
+
+                // 3. 如果序列播完了，循环回到开头
+                if (this.currentIndex >= this.sequence.length) {
+                    this.currentIndex = 0;
+                }
+            }
+        }
+
+        draw() {
+            // 我们需要找出 "当前这一张" 和 "紧接着的下一张"
+
+            // 1. 获取当前图片的索引
+            let currentImgIndex = this.sequence[this.currentIndex];
+            let currentImg = this.images[currentImgIndex];
+
+            // 2. 获取下一张图片的索引 (处理循环情况)
+            let nextSeqIndex = this.currentIndex + 1;
+            if (nextSeqIndex >= this.sequence.length) {
+                nextSeqIndex = 0; // 如果到了末尾，下一张就是开头
+            }
+            let nextImgIndex = this.sequence[nextSeqIndex];
+            let nextImg = this.images[nextImgIndex];
+
+            // 3. 绘制
+            // 画当前张 (在 x 位置)
+            if (currentImg && currentImg.complete) {
+                ctx.drawImage(currentImg, this.x, this.y, this.width, this.height);
+            }
+
+            // 画下一张 (在 x + width 位置，即紧贴着当前张的屁股后面)
+            if (nextImg && nextImg.complete) {
+                ctx.drawImage(nextImg, this.x + this.width, this.y, this.width, this.height);
+            }
+        }
+    }
+
+    //  === 可爱装饰物类 ===
+    class CuteDecoration {
+        constructor() {
+            // 随机选一张图
+            this.image = cuteImages[Math.floor(Math.random() * cuteImages.length)];
+            // 原始大小 (根据你的图片调整)
+            this.spriteW = 150;
+            this.spriteH = 150;
+            // 随机缩放一点点 (0.5倍 到 1.5倍)
+            this.scale = Math.random() * 1 + 0.5;
+            this.width = this.spriteW * this.scale;
+            this.height = this.spriteH * this.scale;
+
+            this.x = canvas.width + Math.random() * 200; // 在屏幕右侧随机位置生成
+            this.y = Math.random() * (GROUND_Y - 300);    // 在空中随机高度
+
+            // 随机速度：远的慢，近的快，制造空间感
+            this.speed = (Math.random() * 2 +1);
+            this.markedForDeletion = false;
+
+            // 简单的上下浮动效果参数
+            this.angle = 0;
+            this.angleSpeed = Math.random() * 0.1;
+        }
+
+        update() {
+            this.x -= this.speed;
+            // 让它上下轻轻漂浮
+            this.angle += this.angleSpeed;
+            this.y += Math.sin(this.angle);
+
+            if (this.x + this.width < 0) this.markedForDeletion = true;
+        }
+
+        draw() {
+            if (this.image.complete) { // 确保图片加载完了再画
+                ctx.drawImage(this.image, this.x, this.y, this.width, this.height);
+            } else {
+                // 图片没加载出来时画个圆圈代替
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.beginPath(); ctx.arc(this.x, this.y, 10, 0, Math.PI*2); ctx.fill();
+            }
+        }
+    }
+
+
+    // --- 4. 游戏实例初始化 ---
+    let player = new Player();
+    let entities = []; // 存放屏幕上所有的苹果和障碍
+
+    // --- 5. 核心功能函数 ---
+
+    function initGame() {
+        // 重置变量
+        score = 0;
+        levelIndex = 0;
+        frames = 0;
+        entities = [];
+        player = new Player();
+        scoreElement.innerText = 'Score: ' + score;
+        //  === 4. 初始化背景和装饰列表 ===
+        // 参数1: 图片数组, 参数2: 顺序数组, 参数3: 速度系数
+        // 0.5 表示背景移动速度是前景的一半 (视差效果)
+
+        background = new BackgroundLayer(bgImages, bgSequence, 0.5);
+        decorations = [];
+        // 重置音乐
+        bgm.currentTime = 0;
+        // 浏览器需要用户交互才能播放音频，所以放在点击事件里
+        bgm.play().catch(e => console.log("需要用户点击才能播放音频"));
+        // gameStartTime = audioCtx.currentTime;
+        lastTime = performance.now(); // 获取当前精确时间作为起点
+
+        gameState = 'PLAYING';
+        startScreen.classList.add('hidden');
+        gameOverScreen.classList.add('hidden');
+
+        if (gameLoopId) cancelAnimationFrame(gameLoopId);
+        gameLoop();
+    }
+
+    function gameOver(isVictory = false) {
+        gameState = 'GAMEOVER';
+        bgm.pause();
+        cancelAnimationFrame(gameLoopId);
+
+        const endTitle = document.getElementById('end-title');
+        endTitle.innerText = isVictory ? "Victory! 再吃一颗苹果^_^" : "Game Over!";
+        endTitle.style.color = isVictory ? "#4CAF50" : "#FF6B6B";
+
+        finalScoreElement.innerText = score;
+        gameOverScreen.classList.remove('hidden');
+        // 👇 === 导出数据 ===
+        if (RECORD_MODE) {
+            console.log("============ 你的谱面 JSON ============");
+            // 把数组转成 JSON 字符串输出
+            console.log(JSON.stringify(recordedLevel, null, 4));
+            console.log("======================================");
+            alert("谱面已生成！请按 F12 打开控制台(Console) 复制 JSON 数据。");
+        }
+    }
+
+    // 简单的矩形碰撞检测 (AABB)
+    function checkCollision(rect1, rect2) {
+        return (
+            rect1.x < rect2.x + rect2.width &&
+            rect1.x + rect1.width > rect2.x &&
+            rect1.y < rect2.y + rect2.height &&
+            rect1.y + rect1.height > rect2.y
+        );
+    }
+
+    // 生成器：检查音乐时间，决定是否生成物体
+    function spawnManager() {
+        // 如果谱面读完了，就返回
+        if (levelIndex >= LEVEL_DATA.length) return;
+
+        const nextSpawn = LEVEL_DATA[levelIndex];
+        // 计算目标时间：拍数 * 每拍秒数
+        // const targetTime = nextSpawn.beat * SECONDS_PER_BEAT;
+        let targetTime = nextSpawn.time - SPAWN_LEAD_TIME;
+
+
+        // 核心：比较当前音乐播放时间和谱面设定的时间
+        // 使用一个小的缓冲范围 (0.1秒) 确保不会错过节奏点
+        if (bgm.currentTime >= targetTime - 0.1) {
+            if (nextSpawn.type === 'end') {
+                gameOver(true); // 胜利通关
+            } else {
+                entities.push(new GameEntity(nextSpawn));
+                levelIndex++;
+            }
+        }
+
+        // 如果音乐播完了，也结束游戏 (作为备用胜利条件)
+        if (bgm.ended && gameState === 'PLAYING') {
+            gameOver(true);
+        }
+    }
+
+    // --- 6. 游戏主循环 (每一帧运行一次) ---
+    function gameLoop(timestamp) {
+        if (gameState !== 'PLAYING') return;
+        // 如果是第一次运行，timestamp 可能会未定义或者导致巨大的差值，做个保底
+
+        if (!lastTime) lastTime = timestamp;
+        //  ===  计算时间差 ===
+        let deltaTime = timestamp - lastTime;
+        lastTime = timestamp;
+        // (防止切换标签页后回来 deltaTime 过大导致飞出屏幕，但这只是个保险)
+        if (deltaTime > 100) deltaTime = 16;
+        // A. 清空画布
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        // 先画背景 (最底层)
+        background.update();
+        background.draw();
+
+
+        // B. 绘制地面线
+        ctx.beginPath();
+        ctx.moveTo(0, GROUND_Y);
+        ctx.lineTo(canvas.width, GROUND_Y);
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 3;
+        ctx.stroke();
+        // 处理装饰物
+        handleDecorations();
+
+        // C. 更新和绘制玩家
+        player.update(deltaTime);
+        player.draw();
+
+        // D. 生成管理 (基于音乐时间)
+        spawnManager();
+
+        // E. 更新和绘制所有实体 (苹果/障碍)
+        // 倒序遍历以便安全删除元素
+        for (let i = entities.length - 1; i >= 0; i--) {
+            let entity = entities[i];
+            entity.update(deltaTime);
+            entity.draw();
+
+            // 碰撞检测
+            if (checkCollision(player, entity)) {
+                if (entity.type === 'apple') {
+                    // 吃到苹果
+                    score += 100;
+                    scoreElement.innerText = 'Score: ' + score;
+                    entity.markedForDeletion = true; // 吃掉后消失
+                    // 播放一个简单的提示音 (可选，需要准备音频文件)
+                    // sfxEat.play();
+                } else if (entity.type === 'obstacle') {
+                    // 撞到障碍
+                    gameOver(false);
+                }
+            }
+
+            // 清理移出屏幕或被吃掉的实体
+            if (entity.markedForDeletion) {
+                entities.splice(i, 1);
+            }
+        }
+
+
+        frames++;
+        // 请求下一帧动画
+        gameLoopId = requestAnimationFrame(gameLoop);
+    }
+
+    //  === 装饰物生成管理器 ===
+    function handleDecorations() {
+        // 每隔一小会儿随机生成一个 (约 0.2% 的概率每帧)
+        if (Math.random() < 0.002) {
+            decorations.push(new CuteDecoration());
+        }
+
+        // 循环更新和绘制
+        for (let i = decorations.length - 1; i >= 0; i--) {
+            decorations[i].update();
+            decorations[i].draw();
+            if (decorations[i].markedForDeletion) {
+                decorations.splice(i, 1);
+            }
+        }
+    }
+
+
+    // --- 7. 输入事件监听 ---
+
+    // 键盘控制 (空格键跳跃/开始)
+    document.addEventListener('keydown', (e) => {
+
+        if (e.code === 'Space') {
+            if (gameState === 'START' || gameState === 'GAMEOVER') {
+                initGame();
+            } else if (gameState === 'PLAYING') {
+                player.jump();
+                // 👇 === 录制逻辑开始 ===
+                if (RECORD_MODE ) {
+                    // 1. 计算当前是第几拍
+                    const currentTime = bgm.currentTime;
+
+                    // 2. 为了方便，我们把所有录入的都暂时当做 "apple"
+                    // (你可以之后在 JSON 里手动把一部分 apple 改成 obstacle)
+                    console.log(`🎵 记录节奏点:  ${currentTime} `);
+
+                    recordedLevel.push({
+                        "time": currentTime,
+                        "type": "apple" // 默认先全是苹果
+                    });
+                }
+            }
+        }
+    });
+
+    // 鼠标/触摸点击控制 (适配移动端)
+    canvas.addEventListener('touchstart', handleTap);
+    canvas.addEventListener('mousedown', handleTap);
+
+    function handleTap(e) {
+        if (gameState === 'PLAYING') {
+            player.jump();
+            // 防止在移动端触发滚动和默认的鼠标事件
+            e.preventDefault();
+        }
+    }
+
+
+
+
+    // 按钮点击事件
+    document.getElementById('start-btn').addEventListener('click', initGame);
+    document.getElementById('restart-btn').addEventListener('click', initGame);
+
+    // 👇 === 必须使用 window 监听，实现“全屏盲按” ===
+    window.addEventListener('touchstart', (e) => {
+        // 忽略多点触控
+        if (e.touches.length > 1) return;
+
+        // 只要是游戏进行中，点屏幕任何地方（包括黑边）都算跳
+        if (gameState === 'PLAYING') {
+            player.jump();
+            e.preventDefault(); // 防止点击产生的高亮或滚动
+        }
+        // 注意：非游戏状态下(Start/GameOver)，还是让按钮去处理点击，这里不要拦截
+    }, { passive: false });
+
+
+</script>
+</body>
+</html>
