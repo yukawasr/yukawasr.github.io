@@ -323,6 +323,8 @@
             this.text = data.text;
             this.width = 38;
             this.height = 38;
+            this.widthsize = 38;
+            this.heightsize = 38;
             this.x = canvas.width; // 从屏幕最右侧生成
             // 苹果在空中，障碍在地生
             if (this.type === 'apple') {
@@ -337,7 +339,7 @@
             this.frameX = 0;        // 当前播放第几帧
             // 如果是苹果，最大帧索引是1 (共2帧)；如果是障碍，是0 (不动画)
             this.maxFrame = (this.type === 'apple') ? 1 : 0;
-            this.fps = 6;           // 动画速度 (不用太快，每秒6帧即可)
+            this.fps = 2;           // 动画速度 (不用太快，每秒6帧即可)
             this.frameTimer = 0;    // 计时器
             this.frameInterval = 1000 / this.fps;
         }
@@ -361,6 +363,8 @@
             }
             if (this.type === 'apple') {
                 imgSource = appleSprite;
+                this.widthsize = 380;
+                this.heightsize = 380;
             } else {
                 imgSource = obstacleImage;
             }
@@ -372,7 +376,7 @@
                 ctx.drawImage(
                     imgSource,          // 图片源
                     sourceX, 0,         // 源图起点 X, Y (根据帧数变化)
-                    this.width, this.height, // 源图切多大 (一帧的大小)
+                    this.widthsize, this.heightsize, // 源图切多大 (一帧的大小)
                     this.x, this.y,     // 画布目标 X, Y
                     this.width, this.height  // 画布目标画多大
                 );
