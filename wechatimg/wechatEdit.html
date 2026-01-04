@@ -1144,44 +1144,150 @@
                 updatePreviewNames();
             }
         }
-        // 生成截图
         function takeScreenshot() {
             const chatPanel = document.querySelector('.preview-panel');
 
-            // 配置选项，允许跨域图片
+            // 方法1：先尝试直接截图
+            captureWithRetry(chatPanel, 0);
+        }
+
+        function captureWithRetry(element, retryCount) {
+            const maxRetries = 2;
+
+            // 配置html2canvas
             const options = {
                 backgroundColor: null,
                 scale: 2,
-                useCORS: true, // 启用CORS
-                allowTaint: true, // 允许污染
-                logging: false, // 关闭日志
-                foreignObjectRendering: false, // 不使用foreignObject
-                onclone: function(clonedDoc) {
-                    // 克隆文档时的回调，可以在这里修改克隆的文档
-                    const clonedPanel = clonedDoc.querySelector('.preview-panel');
-                    if (clonedPanel) {
-                        // 确保所有图片都有crossOrigin属性
-                        const images = clonedPanel.querySelectorAll('img');
-                        images.forEach(img => {
-                            if (img.src.startsWith('data:')) {
-                                // 对于data URL，不需要crossOrigin
-                                return;
-                            }
-                            img.crossOrigin = 'anonymous';
-                        });
-                    }
+                useCORS: true, // 必须为true
+                allowTaint: true, // 对于本地服务器可以设为true
+                logging: true, // 开启日志便于调试
+                imageTimeout: 15000, // 延长超时时间
+                removeContainer: true,
+                onclone: function(clonedDoc, element) {
+                    console.log('正在克隆文档...');
+                    // 确保所有图片都有crossOrigin属性
+                    const images = element.querySelectorAll('img');
+                    images.forEach(img => {
+                        img.setAttribute('crossOrigin', 'anonymous');
+                        // 强制重新加载
+                        if (img.src && !img.src.startsWith('data:')) {
+                            img.src = img.src + '?t=' + Date.now();
+                        }
+                    });
                 }
             };
 
-            html2canvas(chatPanel, options).then(canvas => {
+            console.log('开始截图，重试次数:', retryCount);
+
+            html2canvas(element, options).then(canvas => {
+                console.log('canvas创建成功，尺寸:', canvas.width, 'x', canvas.height);
+
+                // 检查canvas是否有内容
+                const ctx = canvas.getContext('2d');
+                const imageData = ctx.getImageData(0, 0, 1, 1).data;
+                console.log('canvas像素检查:', imageData);
+
+                if (canvas.width === 0 || canvas.height === 0) {
+                    throw new Error('Canvas尺寸为0');
+                }
+
+                // 创建下载链接
                 const link = document.createElement('a');
-                link.download = '微信聊天对话截图.png';
+                link.download = '微信聊天对话截图_' + new Date().getTime() + '.png';
                 link.href = canvas.toDataURL('image/png');
+
+                // 触发下载
+                document.body.appendChild(link);
                 link.click();
+                document.body.removeChild(link);
+
+                console.log('截图下载已触发');
+
             }).catch(error => {
-                console.error('截图生成失败:', error);
-                alert('截图生成失败！请尝试以下方法：\n1. 使用默认头像而非本地图片\n2. 或使用Chrome浏览器\n3. 或调整浏览器安全设置');
+                console.error('截图失败:', error);
+
+                if (retryCount < maxRetries) {
+                    console.log(`第${retryCount + 1}次重试...`);
+                    setTimeout(() => {
+                        captureWithRetry(element, retryCount + 1);
+                    }, 1000);
+                } else {
+                    // 最终失败，尝试备选方案
+                    console.log('尝试备选方案...');
+                    fallbackScreenshot();
+                }
             });
+        }
+
+        // 备选截图方案
+        function fallbackScreenshot() {
+            const chatPanel = document.querySelector('.preview-panel');
+
+            // 临时移除所有图片，用颜色块代替
+            const originalImages = [];
+            const images = chatPanel.querySelectorAll('img');
+
+            images.forEach((img, index) => {
+                originalImages.push({
+                    element: img,
+                    src: img.src,
+                    outerHTML: img.outerHTML
+                });
+
+                // 用彩色方块替代图片
+                const color = index % 2 === 0 ? '#07c160' : '#ff4444';
+                const placeholder = document.createElement('div');
+                placeholder.style.width = '36px';
+                placeholder.style.height = '36px';
+                placeholder.style.backgroundColor = color;
+                placeholder.style.borderRadius = '4px';
+                placeholder.style.display = 'flex';
+                placeholder.style.alignItems = 'center';
+                placeholder.style.justifyContent = 'center';
+                placeholder.style.color = 'white';
+                placeholder.innerHTML = '<i class="fas fa-user"></i>';
+
+                img.parentNode.replaceChild(placeholder, img);
+            });
+
+            // 等待渲染完成
+            setTimeout(() => {
+                html2canvas(chatPanel, {
+                    backgroundColor: null,
+                    scale: 2,
+                    useCORS: false,
+                    allowTaint: false
+                }).then(canvas => {
+                    const link = document.createElement('a');
+                    link.download = '微信聊天对话截图_简化版.png';
+                    link.href = canvas.toDataURL('image/png');
+                    link.click();
+
+                    // 恢复原图片
+                    originalImages.forEach(item => {
+                        if (item.element.parentNode) {
+                            const placeholder = item.element.parentNode.querySelector('div');
+                            if (placeholder) {
+                                placeholder.parentNode.innerHTML = item.outerHTML;
+                            }
+                        }
+                    });
+
+                }).catch(error => {
+                    console.error('备选方案也失败:', error);
+                    alert('截图生成失败，请检查控制台错误信息');
+
+                    // 恢复原图片
+                    originalImages.forEach(item => {
+                        if (item.element.parentNode) {
+                            const placeholder = item.element.parentNode.querySelector('div');
+                            if (placeholder) {
+                                placeholder.parentNode.innerHTML = item.outerHTML;
+                            }
+                        }
+                    });
+                });
+            }, 500);
         }
         
         // 复制文本
