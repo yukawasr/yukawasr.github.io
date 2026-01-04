@@ -759,12 +759,6 @@
         // 更新所有接收方头像
         function updateAllReceiverAvatars() {
             if (!receiverAvatarUrl) return;
-            const receiverAvatar = document.getElementById('receiverAvatar');
-            const imgHtml = receiverAvatarUrl.startsWith('data:')
-                ? `<img src="${receiverAvatarUrl}" alt="接收方头像">`
-                : `<img src="${receiverAvatarUrl}" alt="接收方头像" crossOrigin="anonymous">`;
-
-            receiverAvatar.innerHTML = imgHtml;
             // 更新聊天区域接收方头像
             const receivedAvatars = document.querySelectorAll('.message.received .message-avatar');
             receivedAvatars.forEach(avatar => {
@@ -1049,6 +1043,73 @@
                 renderChat();
             }
         }
+        // 3. 初始化时加载默认头像
+        function initDefaultAvatars(receiverpath,senderpath) {
+            // 获取服务器上的图片URL（使用相对路径）
+
+            loadImageAsBase64(receiverpath)
+                .then(base64 => {
+                    console.log('默认头像加载成功，转换为base64');
+                    receiverAvatarUrl = base64;
+                    updateAllReceiverAvatars();
+                })
+                .catch(error => {
+                    console.warn('默认头像加载失败，使用字母头像:', error);
+                    receiverAvatarUrl = null;
+                    updateAllReceiverAvatars();
+                });
+
+            loadImageAsBase64(senderpath)
+                .then(base64 => {
+                    console.log('默认头像加载成功，转换为base64');
+                    senderAvatarUrl = base64;
+                    updateAllSenderAvatars();
+                })
+                .catch(error => {
+                    console.warn('默认头像加载失败，使用字母头像:', error);
+                    senderAvatarUrl = null;
+                    updateAllSenderAvatars();
+                });
+        }
+        function loadImageAsBase64(url) {
+
+            return new Promise((resolve, reject) => {
+                // 如果已经是data URL，直接返回
+                if (url.startsWith('data:')) {
+                    resolve(url);
+                    return;
+                }
+
+                // 创建一个Image对象来加载图片
+                const img = new Image();
+                img.crossOrigin = 'Anonymous'; // 关键：设置跨域
+
+                img.onload = function() {
+                    try {
+                        // 创建canvas来转换图片
+                        const canvas = document.createElement('canvas');
+                        canvas.width = img.width;
+                        canvas.height = img.height;
+
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0);
+
+                        // 转换为base64
+                        const base64 = canvas.toDataURL('image/jpeg', 0.9); // 使用JPEG格式，90%质量
+                        resolve(base64);
+                    } catch (error) {
+                        reject(new Error('Canvas转换失败: ' + error.message));
+                    }
+                };
+
+                img.onerror = function() {
+                    reject(new Error('图片加载失败: ' + url));
+                };
+
+                // 设置src，添加时间戳避免缓存
+                img.src = url + (url.indexOf('?') === -1 ? '?' : '&') + 't=' + Date.now();
+            });
+        }
         
         // 加载预设对话
         function loadPreset(presetId) {
@@ -1103,33 +1164,34 @@
             if (presetId == 1) {
                 senderNameInput.value = 'Monster';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl =  baseUrl +  baseUrl + '/wechatimg/img/monster.jpg';
-                receiverAvatarUrl = baseUrl + '/wechatimg/img/ashin.jpg';
+                initDefaultAvatars('img/ashin.jpg','img/monster.jpg')
+                // senderAvatarUrl =  ' img/monster.jpg';
+                // receiverAvatarUrl =  ' img/ashin.jpg';
             } else if (presetId == 2) {
                 senderNameInput.value = 'Ashin';
                 receiverNameInput.value = 'Monster';
-                senderAvatarUrl =  baseUrl + '/wechatimg/img/ashin.jpg';
-                receiverAvatarUrl = baseUrl + '/wechatimg/img/monster.jpg';
+                senderAvatarUrl =   '  img/ashin.jpg';
+                receiverAvatarUrl =  '  img/monster.jpg';
             } else if (presetId == 3) {
                 senderNameInput.value = 'Masa';
                 receiverNameInput.value = 'Stone';
-                senderAvatarUrl =  baseUrl + '/wechatimg/img/masa.jpg';
-                receiverAvatarUrl = baseUrl + '/wechatimg/img/stone.jpg';
+                senderAvatarUrl =   '  img/masa.jpg';
+                receiverAvatarUrl =  '  img/stone.jpg';
             } else if (presetId == 4) {
                 senderNameInput.value = 'Ming';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl =  baseUrl + '/wechatimg/img/ming.jpg';
-                receiverAvatarUrl = baseUrl + '/wechatimg/img/ashin.jpg';
+                senderAvatarUrl =   '  img/ming.jpg';
+                receiverAvatarUrl =  '  img/ashin.jpg';
             } else if (presetId == 5) {
                 senderNameInput.value = 'Monster';
                 receiverNameInput.value = 'Masa';
-                senderAvatarUrl =  baseUrl + '/wechatimg/img/monster.jpg';
-                receiverAvatarUrl = baseUrl + '/wechatimg/img/masa.jpg';
+                senderAvatarUrl =   '  img/monster.jpg';
+                receiverAvatarUrl =  '  img/masa.jpg';
             } else if (presetId == 6) {
                 senderNameInput.value = 'Jay';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl =  baseUrl + '/wechatimg/img/maydayjay.jpg';
-                receiverAvatarUrl = baseUrl + '/wechatimg/img/ashin.jpg';
+                senderAvatarUrl =   '  img/maydayjay.jpg';
+                receiverAvatarUrl =  '  img/ashin.jpg';
             }
             if (presets[presetId]) {
                 chatMessages = presets[presetId].map((msg, index) => ({
