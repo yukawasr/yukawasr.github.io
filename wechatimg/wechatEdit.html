@@ -1164,34 +1164,27 @@
             if (presetId == 1) {
                 senderNameInput.value = 'Monster';
                 receiverNameInput.value = 'Ashin';
-                initDefaultAvatars('img/ashin.jpg','img/monster.jpg')
-                // senderAvatarUrl =  ' img/monster.jpg';
-                // receiverAvatarUrl =  ' img/ashin.jpg';
+                initDefaultAvatars('img/ashin.jpg','img/monster.jpg');
             } else if (presetId == 2) {
                 senderNameInput.value = 'Ashin';
                 receiverNameInput.value = 'Monster';
-                senderAvatarUrl =   '  img/ashin.jpg';
-                receiverAvatarUrl =  '  img/monster.jpg';
+                initDefaultAvatars('img/monster.jpg','img/ashin.jpg');
             } else if (presetId == 3) {
                 senderNameInput.value = 'Masa';
                 receiverNameInput.value = 'Stone';
-                senderAvatarUrl =   '  img/masa.jpg';
-                receiverAvatarUrl =  '  img/stone.jpg';
+                initDefaultAvatars('img/stone.jpg','img/masa.jpg');
             } else if (presetId == 4) {
                 senderNameInput.value = 'Ming';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl =   '  img/ming.jpg';
-                receiverAvatarUrl =  '  img/ashin.jpg';
+                initDefaultAvatars('img/ashin.jpg','img/ming.jpg');
             } else if (presetId == 5) {
                 senderNameInput.value = 'Monster';
                 receiverNameInput.value = 'Masa';
-                senderAvatarUrl =   '  img/monster.jpg';
-                receiverAvatarUrl =  '  img/masa.jpg';
+                initDefaultAvatars('img/masa.jpg','img/monster.jpg');
             } else if (presetId == 6) {
                 senderNameInput.value = 'Jay';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl =   '  img/maydayjay.jpg';
-                receiverAvatarUrl =  '  img/ashin.jpg';
+                initDefaultAvatars('img/ashin.jpg','img/maydayjay.jpg');
             }
             if (presets[presetId]) {
                 chatMessages = presets[presetId].map((msg, index) => ({
