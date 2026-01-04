@@ -647,6 +647,7 @@
 
     <script src="html2canvas.min.js"></script>
     <script>
+        const baseUrl = window.location.origin;
         // 全局变量
         let messageId = 5;
         let chatMessages = [
@@ -758,11 +759,12 @@
         // 更新所有接收方头像
         function updateAllReceiverAvatars() {
             if (!receiverAvatarUrl) return;
+            const receiverAvatar = document.getElementById('receiverAvatar');
+            const imgHtml = receiverAvatarUrl.startsWith('data:')
+                ? `<img src="${receiverAvatarUrl}" alt="接收方头像">`
+                : `<img src="${receiverAvatarUrl}" alt="接收方头像" crossOrigin="anonymous">`;
 
-            // // 更新预览区域顶部头像
-            // const receiverAvatar = document.getElementById('receiverAvatar');
-            // receiverAvatar.innerHTML = `<img src="${receiverAvatarUrl}" alt="接收方头像">`;
-
+            receiverAvatar.innerHTML = imgHtml;
             // 更新聊天区域接收方头像
             const receivedAvatars = document.querySelectorAll('.message.received .message-avatar');
             receivedAvatars.forEach(avatar => {
@@ -1101,33 +1103,33 @@
             if (presetId == 1) {
                 senderNameInput.value = 'Monster';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl = 'img/monster.jpg';
-                receiverAvatarUrl = 'img/ashin.jpg';
+                senderAvatarUrl =  baseUrl +  baseUrl + 'img/monster.jpg';
+                receiverAvatarUrl = baseUrl + 'img/ashin.jpg';
             } else if (presetId == 2) {
                 senderNameInput.value = 'Ashin';
                 receiverNameInput.value = 'Monster';
-                senderAvatarUrl = 'img/ashin.jpg';
-                receiverAvatarUrl = 'img/monster.jpg';
+                senderAvatarUrl =  baseUrl + 'img/ashin.jpg';
+                receiverAvatarUrl = baseUrl + 'img/monster.jpg';
             } else if (presetId == 3) {
                 senderNameInput.value = 'Masa';
                 receiverNameInput.value = 'Stone';
-                senderAvatarUrl = 'img/masa.jpg';
-                receiverAvatarUrl = 'img/stone.jpg';
+                senderAvatarUrl =  baseUrl + 'img/masa.jpg';
+                receiverAvatarUrl = baseUrl + 'img/stone.jpg';
             } else if (presetId == 4) {
                 senderNameInput.value = 'Ming';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl = 'img/ming.jpg';
-                receiverAvatarUrl = 'img/ashin.jpg';
+                senderAvatarUrl =  baseUrl + 'img/ming.jpg';
+                receiverAvatarUrl = baseUrl + 'img/ashin.jpg';
             } else if (presetId == 5) {
                 senderNameInput.value = 'Monster';
                 receiverNameInput.value = 'Masa';
-                senderAvatarUrl = 'img/monster.jpg';
-                receiverAvatarUrl = 'img/masa.jpg';
+                senderAvatarUrl =  baseUrl + 'img/monster.jpg';
+                receiverAvatarUrl = baseUrl + 'img/masa.jpg';
             } else if (presetId == 6) {
                 senderNameInput.value = 'Jay';
                 receiverNameInput.value = 'Ashin';
-                senderAvatarUrl = 'img/maydayjay.jpg';
-                receiverAvatarUrl = 'img/ashin.jpg';
+                senderAvatarUrl =  baseUrl + 'img/maydayjay.jpg';
+                receiverAvatarUrl = baseUrl + 'img/ashin.jpg';
             }
             if (presets[presetId]) {
                 chatMessages = presets[presetId].map((msg, index) => ({
@@ -1142,7 +1144,6 @@
                 updatePreviewNames();
             }
         }
-        
         // 生成截图
         function takeScreenshot() {
             const chatPanel = document.querySelector('.preview-panel');
