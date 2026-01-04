@@ -462,6 +462,75 @@
             color: #07c160;
             margin-right: 5px;
         }
+        /* 移动端优化 */
+        @media (max-width: 768px) {
+            .message, .message-time[data-id] {
+                -webkit-tap-highlight-color: transparent;
+                touch-action: manipulation;
+            }
+
+            .message-bubble {
+                max-width: 85%;
+                font-size: 16px; /* 手机端字体稍大 */
+                padding: 10px 14px;
+            }
+
+            /* 长按效果 */
+            .message.long-press .message-bubble {
+                background-color: rgba(255, 68, 68, 0.2) !important;
+                transition: background-color 0.2s;
+            }
+
+            /* 操作提示 */
+            .operation-hint {
+                font-size: 14px;
+                padding: 12px;
+            }
+        }
+
+        /* 动画 */
+        @keyframes hintFadeIn {
+            from {
+                opacity: 0;
+                transform: translateX(-50%) translateY(-10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(-50%) translateY(0);
+            }
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+
+        /* 防止文本选择 */
+        .message, .message-time {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        /* 移动端优化：更大的点击区域 */
+        .message-content {
+            min-height: 44px; /* 苹果推荐的最小触摸尺寸 */
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        /* 触摸设备样式优化 */
+        .touch-device .message {
+            cursor: default;
+        }
+
+        .touch-device .message-bubble {
+            cursor: default;
+        }
+
+        /* 防止iOS橡皮筋效果干扰 */
+        html, body {
+            overscroll-behavior-y: contain;
+        }
     </style>
 </head>
 <body>
@@ -647,6 +716,48 @@
 
     <script src="html2canvas.min.js"></script>
     <script>
+        // 在页面加载时检测设备并调整
+        window.addEventListener('load', function() {
+            // 检测是否为触摸设备
+            const isTouchDevice = 'ontouchstart' in window ||
+                navigator.maxTouchPoints > 0 ||
+                navigator.msMaxTouchPoints > 0;
+
+            if (isTouchDevice) {
+                console.log('检测到触摸设备，启用移动端优化');
+                document.body.classList.add('touch-device');
+
+                // 调整一些参数
+                const hint = document.createElement('div');
+                hint.style.cssText = `
+            position: fixed;
+            bottom: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0,0,0,0.8);
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-size: 14px;
+            z-index: 999;
+            text-align: center;
+        `;
+                hint.innerHTML = '💡 提示：长按消息可以删除';
+                hint.id = 'mobile-tip';
+
+                document.body.appendChild(hint);
+
+                // 5秒后自动隐藏
+                setTimeout(() => {
+                    const tip = document.getElementById('mobile-tip');
+                    if (tip) {
+                        tip.style.opacity = '0';
+                        tip.style.transition = 'opacity 0.5s';
+                        setTimeout(() => tip.remove(), 500);
+                    }
+                }, 5000);
+            }
+        });
         const baseUrl = window.location.origin;
         // 全局变量
         let messageId = 5;
@@ -838,55 +949,9 @@
 
 
             document.querySelectorAll('.message, .message-time').forEach(msg => {
-                // 点击事件 - 编辑消息
-                msg.addEventListener('click', function(e) {
-                    // 防止长按触发点击
-                    if (this.classList.contains('long-press')) {
-                        this.classList.remove('long-press');
-                        return;
-                    }
 
-                    const id = parseInt(this.getAttribute('data-id'));
-                    editMessage(id);
-                });
-
-                // 长按事件 - 删除消息
-                let pressTimer;
-                msg.addEventListener('mousedown', function(e) {
-                    const messageElement = this;
-                    pressTimer = setTimeout(function() {
-                        messageElement.classList.add('long-press');
-                        const id = parseInt(messageElement.getAttribute('data-id'));
-                        deleteMessage(id);
-                    }, 800); // 长按800毫秒触发删除
-                });
-
-                msg.addEventListener('mouseup', function(e) {
-                    clearTimeout(pressTimer);
-                });
-
-                msg.addEventListener('mouseleave', function(e) {
-                    clearTimeout(pressTimer);
-                });
-
-                // 触摸设备支持
-                msg.addEventListener('touchstart', function(e) {
-                    const messageElement = this;
-                    pressTimer = setTimeout(function() {
-                        messageElement.classList.add('long-press');
-                        const id = parseInt(messageElement.getAttribute('data-id'));
-                        deleteMessage(id);
-                    }, 800);
-                    e.preventDefault(); // 防止触摸滚动
-                });
-
-                msg.addEventListener('touchend', function(e) {
-                    clearTimeout(pressTimer);
-                });
-
-                msg.addEventListener('touchmove', function(e) {
-                    clearTimeout(pressTimer);
-                });
+                // 为每个消息添加触摸事件处理器
+                addMessageTouchHandlers(msg);
             });
             // 确保应用当前的名称显示设置
             const messageSenders = document.querySelectorAll('.message-sender');
@@ -978,27 +1043,261 @@
                 messageTextInput.value = '';
             }
         }
-        
+        // 新增：统一的消息触摸事件处理器
+        function addMessageTouchHandlers(messageElement) {
+            let pressTimer = null;
+            let isLongPress = false;
+            let touchStartX = 0;
+            let touchStartY = 0;
+            const id = parseInt(messageElement.getAttribute('data-id'));
+
+            // 触摸开始
+            messageElement.addEventListener('touchstart', function(e) {
+                e.preventDefault();
+                isLongPress = false;
+
+                // 记录触摸起始位置
+                const touch = e.touches[0];
+                touchStartX = touch.clientX;
+                touchStartY = touch.clientY;
+
+                // 开始长按计时
+                pressTimer = setTimeout(function() {
+                    isLongPress = true;
+                    messageElement.classList.add('long-press');
+
+                    // 显示删除提示
+                    showDeleteHint(messageElement);
+
+                    // 震动反馈（如果设备支持）
+                    if (navigator.vibrate) {
+                        navigator.vibrate(50);
+                    }
+                }, 600); // 手机长按时间设为600ms
+            }, { passive: false });
+
+            // 触摸移动
+            messageElement.addEventListener('touchmove', function(e) {
+                if (!pressTimer) return;
+
+                const touch = e.touches[0];
+                const deltaX = Math.abs(touch.clientX - touchStartX);
+                const deltaY = Math.abs(touch.clientY - touchStartY);
+
+                // 如果移动距离过大，取消长按
+                if (deltaX > 10 || deltaY > 10) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                    messageElement.classList.remove('long-press');
+                    removeDeleteHint();
+                }
+            }, { passive: true });
+
+            // 触摸结束
+            messageElement.addEventListener('touchend', function(e) {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+
+                // 如果已经显示长按提示，不触发点击
+                if (isLongPress) {
+                    isLongPress = false;
+                    messageElement.classList.remove('long-press');
+                    removeDeleteHint();
+
+                    // 长按结束，触发删除
+                    deleteMessage(id);
+                    return;
+                }
+
+                // 检查是否为点击（移动距离很小）
+                const touch = e.changedTouches[0];
+                const deltaX = Math.abs(touch.clientX - touchStartX);
+                const deltaY = Math.abs(touch.clientY - touchStartY);
+
+                if (deltaX < 10 && deltaY < 10) {
+                    // 点击事件
+                    e.preventDefault();
+                    editMessage(id);
+                }
+
+                removeDeleteHint();
+            }, { passive: false });
+
+            // 触摸取消
+            messageElement.addEventListener('touchcancel', function() {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+                messageElement.classList.remove('long-press');
+                removeDeleteHint();
+            });
+
+            // 保留鼠标事件（桌面端）
+            messageElement.addEventListener('mousedown', function(e) {
+                pressTimer = setTimeout(function() {
+                    messageElement.classList.add('long-press');
+                    deleteMessage(id);
+                }, 800);
+            });
+
+            messageElement.addEventListener('mouseup', function() {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+                messageElement.classList.remove('long-press');
+            });
+
+            messageElement.addEventListener('mouseleave', function() {
+                if (pressTimer) {
+                    clearTimeout(pressTimer);
+                    pressTimer = null;
+                }
+                messageElement.classList.remove('long-press');
+            });
+
+            // 点击事件（桌面端）
+            messageElement.addEventListener('click', function(e) {
+                // 防止触摸事件的点击触发
+                if ('ontouchstart' in window && e.clientX === 0 && e.clientY === 0) {
+                    return;
+                }
+                editMessage(id);
+            });
+        }
+
+        // 新增：显示删除提示
+        function showDeleteHint(element) {
+            removeDeleteHint(); // 先移除已有的提示
+
+            const hint = document.createElement('div');
+            hint.className = 'delete-hint-mobile';
+            hint.textContent = '松开删除';
+
+            // 计算位置
+            const rect = element.getBoundingClientRect();
+            hint.style.cssText = `
+        position: fixed;
+        top: ${rect.top - 40}px;
+        left: ${rect.left + rect.width / 2}px;
+        transform: translateX(-50%);
+        background: rgba(255, 68, 68, 0.9);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        z-index: 10000;
+        pointer-events: none;
+        animation: hintFadeIn 0.2s ease;
+    `;
+
+            hint.id = 'mobile-delete-hint';
+            document.body.appendChild(hint);
+        }
+
+        // 新增：移除删除提示
+        function removeDeleteHint() {
+            const hint = document.getElementById('mobile-delete-hint');
+            if (hint) {
+                hint.remove();
+            }
+        }
+
+        // 修改deleteMessage函数，添加移动端友好的确认
+        function deleteMessage(id) {
+            // 移动端使用更友好的确认方式
+            if (isMobileDevice()) {
+                showMobileConfirm(id);
+            } else {
+                if (confirm('确定要删除这条消息吗？')) {
+                    performDelete(id);
+                }
+            }
+        }
+
+        // 新增：检查是否为移动设备
+        function isMobileDevice() {
+            return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                (window.innerWidth <= 768);
+        }
+
+        // 新增：移动端确认对话框
+        function showMobileConfirm(id) {
+            // 移除已有的确认框
+            const existingConfirm = document.getElementById('mobile-confirm-dialog');
+            if (existingConfirm) {
+                existingConfirm.remove();
+            }
+
+            const dialog = document.createElement('div');
+            dialog.id = 'mobile-confirm-dialog';
+            dialog.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0,0,0,0.5);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10001;
+        animation: fadeIn 0.3s ease;
+    `;
+
+            dialog.innerHTML = `
+        <div style="background: white; border-radius: 12px; padding: 20px; max-width: 80%; text-align: center;">
+            <h3 style="margin-bottom: 15px; color: #333;">删除消息</h3>
+            <p style="margin-bottom: 20px; color: #666;">确定要删除这条消息吗？</p>
+            <div style="display: flex; gap: 10px;">
+                <button id="confirm-cancel" style="flex: 1; padding: 10px; background: #f0f0f0; border: none; border-radius: 6px;">
+                    取消
+                </button>
+                <button id="confirm-delete" style="flex: 1; padding: 10px; background: #ff4444; color: white; border: none; border-radius: 6px;">
+                    删除
+                </button>
+            </div>
+        </div>
+    `;
+
+            document.body.appendChild(dialog);
+
+            // 添加事件监听
+            document.getElementById('confirm-cancel').addEventListener('click', function() {
+                dialog.remove();
+            });
+
+            document.getElementById('confirm-delete').addEventListener('click', function() {
+                performDelete(id);
+                dialog.remove();
+            });
+
+            // 点击背景关闭
+            dialog.addEventListener('click', function(e) {
+                if (e.target === dialog) {
+                    dialog.remove();
+                }
+            });
+        }
+
+        // 新增：执行删除操作
+        function performDelete(id) {
+            chatMessages = chatMessages.filter(m => m.id !== id);
+            renderChat();
+            showNotification('消息已删除');
+        }
         // 编辑消息
         function editMessage(id) {
             const message = chatMessages.find(m => m.id === id);
             if (!message) return;
-            
+
             const newContent = prompt('编辑消息内容：', message.content);
             if (newContent !== null && newContent.trim() !== '') {
                 message.content = newContent.trim();
                 renderChat();
-            }
-
-        }
-        // 添加新的deleteMessage函数
-        function deleteMessage(id) {
-            if (confirm('确定要删除这条消息吗？')) {
-                chatMessages = chatMessages.filter(m => m.id !== id);
-                renderChat();
-
-                // 显示删除成功提示
-                showNotification('消息已删除');
             }
         }
         // 添加提示函数
