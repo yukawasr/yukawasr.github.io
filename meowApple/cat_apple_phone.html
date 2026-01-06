@@ -25,12 +25,11 @@
 
             /* 👇 核心适配逻辑 👇 */
             width: 100%;             /* 默认占90%宽度 (适配手机竖屏) */
-            max-width: 1000px;        /* 电脑上最大不超过 800px */
+            max-width: 600px;        /* 电脑上最大不超过 800px */
 
-            /* 强制保持 2:1 比例，根据宽度自动计算高度 */
-            aspect-ratio: 2 / 1;
+            aspect-ratio: 2 / 3; /* 比例改成 2:3 (对应 600:900) */
 
-            /* 如果屏幕特别扁 (比如手机横屏时高度不够)，则改用高度限制 */
+
             max-height: 100vh;
 
             border: 4px solid #fff;
@@ -81,7 +80,7 @@
 
         #score-board {
             position: absolute;
-            top: 5%;
+            top: 10%;
             left: 5%;
             font-size: clamp(16px, 4vw, 24px); /* 分数文字自适应 */
             font-weight: bold;
@@ -96,7 +95,7 @@
 <body>
 
 <div id="game-container">
-    <canvas id="gameCanvas" width="1000" height="500"></canvas>
+    <canvas id="gameCanvas" width="600" height="900"></canvas>
     <div id="score-board">Score: 0</div>
 
     <div id="start-screen" class="overlay">
@@ -131,16 +130,26 @@
     const bgm = document.getElementById('bgm');
 
     // 游戏配置
-    const GRAVITY = 0.75;       // 重力
-    const JUMP_FORCE = -15;    // 跳跃力度
-    const GROUND_Y = 438;      // 地面高度坐标
-    const SCROLL_SPEED = 6.25;    // 游戏滚动速度 (像素/帧)
+    const GRAVITY = 0.5;       // 重力稍小，手感更细腻
+    const JUMP_FORCE = -11;    // 跳跃力度适配
+    const GROUND_Y = 790;      // 地面位置下移 (总高900，地面在750)
+
+    // 速度建议：5.0
+    // 600px 的宽度，5.0 的速度，大概意味着物体横穿屏幕需要 2秒。
+    // 这是一个比较舒适的手机反应时间。
+    const SCROLL_SPEED = 5.0;
     // 👇 === 新增：在这里添加 lastTime 变量 ===
     let lastTime = 0;    //用于记录上一帧的时间戳
     const BPM = 130;
     const SECONDS_PER_BEAT = 60.0 / BPM;
-    const SPAWN_LEAD_TIME = (1000 - 125) / (SCROLL_SPEED * 60);
+    const SPAWN_LEAD_TIME = (600 - 50) / (SCROLL_SPEED * 60);
+    // 请填写你的音乐总时长 (秒)。
+    // 如果你想精确匹配，可以在 Audacity 里看，或者大概填一个 (比如 90秒)
+    const MUSIC_DURATION = 170;
 
+    // 你希望背景在音乐播放期间循环滚动几次？
+    // 你说希望滚动 2 轮，就填 2
+    const BACKGROUND_LOOPS = 1;
     //  === 录制模式开关 ===
     // 【平时玩设为 false】。需要制作谱面时设为 true。
     const RECORD_MODE = false;
@@ -158,10 +167,9 @@
     catImage.src = 'src/img/default.png';
 
     //  === 加载背景图数组 ===
-    const bgFiles = ['src/img/bg1.png', 'src/img/bg1b.png',  'src/img/bg1f.png',
-        'src/img/bg1s.png', 'src/img/bg12026.png',
-        'src/img/bg2.png', 'src/img/bg2b.png',  'src/img/bg2f.png',
-        'src/img/bg2s.png', 'src/img/bg22026.png'];
+    const bgFiles = [
+        'src/img/bg2.png', 'src/img/bg2b.png', 'src/img/bg2s.png',
+        'src/img/bg2f.png', 'src/img/bg22026.png'];
 
     const bgImages = [];
     bgFiles.forEach(src => {
@@ -169,8 +177,12 @@
         img.src = src; // 确保这些图片都在你的文件夹里
         bgImages.push(img);
     });
-    // 定义你想要的播放顺序 (对应 bgImages 的索引，从0开始)
-    const bgSequence = [5,5,5,5,5,5,5,5,5,5, 5,5,5,5,5,5,5,5,6,8,   5,5,5,5,5,5,5,5,7,9];
+    // 定义你想要的播放顺序 (对应 bgImages 的索引，从0开始) 96 17 113 162 8 170
+    const bgSequence = [
+        0,0,0,0,0, 0,0,0,0,0,  0,0,0,0,0,  0,0,0,0,0,  0,0,0,0,0,
+        0,1,2,
+        0,0,0,0,0,  0,0,0,0,0,  0,0,0,
+        3,4];
 
     const appleSprite = new Image();
     appleSprite.src = 'src/img/apple_anim.png';
@@ -228,9 +240,9 @@
     // 玩家 (小猫) 类
     class Player {
         constructor() {
-            this.width = 100;
-            this.height = 100;
-            this.x = 125; // 固定在屏幕左侧
+            this.width = 180;
+            this.height = 180;
+            this.x = 50; // 固定在屏幕左侧
             this.y = GROUND_Y - this.height;
             this.velocityY = 0;
             this.isJumping = false;
@@ -321,16 +333,30 @@
         constructor(data) {
             this.type = data.type;
             this.text = data.text;
-            this.width = 38;
-            this.height = 38;
-            this.widthsize = 38;
-            this.heightsize = 38;
+            //读取行号，默认为 0 ===
+            this.row = data.row || 0;
+            this.width = 60;
+            this.height = 60;
+            this.widthsize = 60;
+            this.heightsize = 60;
             this.x = canvas.width; // 从屏幕最右侧生成
             // 苹果在空中，障碍在地生
             if (this.type === 'apple') {
-                this.y = GROUND_Y - 150;
+                this.y = GROUND_Y - 240;
             } else if (this.type === 'lyric') {
-                this.y = GROUND_Y - 250; // 歌词飘在更高的地方，不挡路
+                // 定义歌词基准线 (Base Line)
+                const lyricBaseY = GROUND_Y - 420;
+                // 定义每一行的高度间隔 (Line Height)
+                const lineHeight = Math.floor(canvas.width * 0.20);
+                // 核心公式：奇数在下偶数在上 基准线 - (行号 * 行高)
+                // 这样 row 0 在最下，row 1 在下面，row 2 在上面
+                let rowStep = (this.row/2);
+                if(this.row%2===0){
+                    this.y = lyricBaseY - (rowStep * lineHeight);
+                }else{
+                    rowStep = (this.row+1)/2;
+                     this.y = lyricBaseY + (rowStep * lineHeight);
+                }
             } else {
                 this.y = GROUND_Y - 38;  // 障碍物在地面
             }
@@ -349,9 +375,13 @@
             if (this.type === 'lyric') {
                 ctx.save(); // 保存当前画笔状态
                 ctx.fillStyle = "#01b6fd"; // 字体颜色
-                ctx.font = "bold 106px 'Microsoft YaHei', sans-serif"; // 字体大小 (记得配合画布缩放)
                 ctx.strokeStyle = "white"; // 描边颜色
                 ctx.lineWidth = 4;
+                // 👇 === 核心修改：动态计算字体大小 ===
+                // 设定为画布宽度的 8% (600 * 0.08 = 48px)
+                // 这样无论你以后怎么改 canvas 宽度，字号永远合适
+                const fontSize = Math.floor(canvas.width * 0.20);
+                ctx.font = `bold ${fontSize}px 'Microsoft YaHei', sans-serif`;
 
                 // 绘制描边 (让文字更清楚)
                 ctx.strokeText(this.text, this.x, this.y);
@@ -371,7 +401,7 @@
             if (imgSource && imgSource.complete) {
                 // 核心变化在这里：
                 // 根据 this.frameX 计算从原图的哪里开始切
-                const sourceX = this.frameX * this.width;
+                const sourceX = this.frameX * this.widthsize;
 
                 ctx.drawImage(
                     imgSource,          // 图片源
@@ -414,61 +444,90 @@
         constructor(images, sequence, speedModifier) {
             this.images = images;       // 图片对象数组
             this.sequence = sequence;   // 顺序数组 [0, 0, 1...]
-            this.speedModifier = speedModifier; // 视差系数 (0.5表示半速，1.0表示全速)
-            this.speed = SCROLL_SPEED * this.speedModifier;
-            this.x = 0;
-            this.y = 0;
-            this.width = 1000;  // 假设背景图宽度和画布一致
-            this.height = 500;
+            // this.speedModifier = speedModifier; // 视差系数 (0.5表示半速，1.0表示全速)
+            // 强制背景大小适配 Canvas
+            this.width = 1600;
+            this.height = 900;
 
-            this.currentIndex = 0; // 当前播放到序列的第几个
+            // 1. 计算背景序列的总“虚拟宽度” (一轮的长度)
+            // 比如有 5 张图，每张宽 600，总宽就是 3000
+            this.oneLoopWidth = this.sequence.length * this.width;
+
+            // 2. 计算游戏全程需要跑的总距离 (像素)
+            // 比如循环 2 轮，就是要跑 6000 像素
+            this.totalDistance = this.oneLoopWidth * BACKGROUND_LOOPS;
+            this.speed = SCROLL_SPEED * this.speedModifier;
         }
 
         update() {
-            // 根据游戏速度移动
-            this.speed = SCROLL_SPEED * this.speedModifier;
-            // 向左移动
-            this.x -= this.speed;
-
-            // 核心逻辑：当当前的一张图完全移出屏幕左侧时
-            if (this.x <= -this.width) {
-                // 1. 把坐标拉回来 (与其重置为0，不如加上width，防止浮点数计算导致的缝隙)
-                this.x += this.width;
-
-                // 2. 指针移向序列的下一个
-                this.currentIndex++;
-
-                // 3. 如果序列播完了，循环回到开头
-                if (this.currentIndex >= this.sequence.length) {
-                    this.currentIndex = 0;
-                }
-            }
+            // // 根据游戏速度移动
+            // this.speed = SCROLL_SPEED * this.speedModifier;
+            // // 向左移动
+            // this.x -= this.speed;
+            //
+            // // 核心逻辑：当当前的一张图完全移出屏幕左侧时
+            // if (this.x <= -this.width) {
+            //     // 1. 把坐标拉回来 (与其重置为0，不如加上width，防止浮点数计算导致的缝隙)
+            //     this.x += this.width;
+            //
+            //     // 2. 指针移向序列的下一个
+            //     this.currentIndex++;
+            //
+            //     // 3. 如果序列播完了，循环回到开头
+            //     if (this.currentIndex >= this.sequence.length) {
+            //         this.currentIndex = 0;
+            //     }
+            // }
         }
 
         draw() {
-            // 我们需要找出 "当前这一张" 和 "紧接着的下一张"
-
-            // 1. 获取当前图片的索引
-            let currentImgIndex = this.sequence[this.currentIndex];
-            let currentImg = this.images[currentImgIndex];
-
-            // 2. 获取下一张图片的索引 (处理循环情况)
-            let nextSeqIndex = this.currentIndex + 1;
-            if (nextSeqIndex >= this.sequence.length) {
-                nextSeqIndex = 0; // 如果到了末尾，下一张就是开头
-            }
-            let nextImgIndex = this.sequence[nextSeqIndex];
-            let nextImg = this.images[nextImgIndex];
-
-            // 3. 绘制
-            // 画当前张 (在 x 位置)
-            if (currentImg && currentImg.complete) {
-                ctx.drawImage(currentImg, this.x, this.y, this.width, this.height);
+            // A. 获取当前音乐时间 (必须减去游戏开始的等待时间)
+            // 如果游戏还没开始，时间就是 0
+            let currentTime = 0;
+            if (gameState === 'PLAYING' || gameState === 'GAMEOVER') {
+                currentTime = bgm.currentTime;
             }
 
-            // 画下一张 (在 x + width 位置，即紧贴着当前张的屁股后面)
-            if (nextImg && nextImg.complete) {
-                ctx.drawImage(nextImg, this.x + this.width, this.y, this.width, this.height);
+            // B. 计算进度 (0.0 到 1.0)
+            let progress = currentTime / MUSIC_DURATION;
+
+            // 防止溢出 (比如音乐放完了，背景就停在终点)
+            if (progress > 1) progress = 1;
+            if (progress < 0) progress = 0;
+
+            // C. 计算当前应该滚动的绝对像素值
+            // 比如进度 0.5 (一半)，总距离 6000，那现在应该在 3000px 的位置
+            const currentPixelX = progress * this.totalDistance;
+
+            // D. 核心算法：计算当前应该显示哪一张图，以及偏移量
+
+            // 1. 全局索引：我们在第几张图的位置？
+            // 比如 currentPixelX = 650，宽 600，那就是第 1 张图 (索引从0开始)
+            const globalIndex = Math.floor(currentPixelX / this.width);
+
+            // 2. 局部偏移：在这张图里，我们向左移了多少？
+            // 比如 650 % 600 = 50。说明我们向左移了 50px。
+            // 所以绘制坐标应该是 -50。
+            const localX = -(currentPixelX % this.width);
+
+            // 3. 映射到 sequence 数组
+            // 因为我们可能跑了好几轮，所以要取模
+            const seqIndex1 = globalIndex % this.sequence.length;
+            const seqIndex2 = (globalIndex + 1) % this.sequence.length; // 下一张
+
+            // 4. 获取图片对象
+            const img1 = this.images[this.sequence[seqIndex1]];
+            const img2 = this.images[this.sequence[seqIndex2]];
+
+            // E. 绘制
+            // 画当前这张 (在 localX 位置，通常是负数或0)
+            if (img1 && img1.complete) {
+                ctx.drawImage(img1, localX, 0, this.width, this.height);
+            }
+
+            // 画后面接着的那张 (在 localX + width 位置)
+            if (img2 && img2.complete) {
+                ctx.drawImage(img2, localX + this.width, 0, this.width, this.height);
             }
         }
     }
@@ -685,7 +744,7 @@
     //  === 装饰物生成管理器 ===
     function handleDecorations() {
         // 每隔一小会儿随机生成一个 (约 0.2% 的概率每帧)
-        if (Math.random() < 0.0002) {
+        if (Math.random() < 0.0008) {
             decorations.push(new CuteDecoration());
         }
 
@@ -714,13 +773,13 @@
                 if (RECORD_MODE ) {
                     // 1. 计算当前是第几拍
                     const currentTime = bgm.currentTime;
-
+                    let formatted = Number(currentTime.toFixed(2));
                     // 2. 为了方便，我们把所有录入的都暂时当做 "apple"
                     // (你可以之后在 JSON 里手动把一部分 apple 改成 obstacle)
-                    console.log(`🎵 记录节奏点:  ${currentTime} `);
+                    console.log(`🎵 记录节奏点:  ${formatted} `);
 
                     recordedLevel.push({
-                        "time": currentTime,
+                        "time": formatted,
                         "type": "apple" // 默认先全是苹果
                     });
                 }
